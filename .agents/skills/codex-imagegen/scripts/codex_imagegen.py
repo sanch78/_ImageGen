@@ -17,6 +17,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+DEFAULT_MODEL, DEFAULT_EFFORT = "gpt-6.1-sol", "medium"
+EFFORTS = ("low", "medium", "high", "xhigh", "max", "ultra")
 EXIT_FAILED, EXIT_USAGE, EXIT_AUTH, EXIT_REFUSED, EXIT_LIMIT = 1, 2, 3, 4, 5
 ASPECTS = {
     "square": "square (1:1)",
@@ -50,7 +52,9 @@ def parse_args(argv):
     p.add_argument("--transparent", action="store_true", help="request a transparent background")
     p.add_argument("--ref", action="append", type=Path, default=[],
                    help="reference image attached to the request (repeatable)")
-    p.add_argument("--model", help="Codex model override")
+    p.add_argument("--model", default=DEFAULT_MODEL, help=f"Codex model (default {DEFAULT_MODEL})")
+    p.add_argument("--effort", choices=EFFORTS, default=DEFAULT_EFFORT,
+                   help=f"Codex reasoning effort (default {DEFAULT_EFFORT})")
     p.add_argument("--timeout", type=int, default=600, help="seconds (default 600)")
     p.add_argument("--force", action="store_true", help="replace an existing --out")
     p.add_argument("--no-sidecar", action="store_true", help="skip the <out>.json metadata file")
@@ -203,9 +207,8 @@ def run_codex(a):
     try:
         last = stage / "last-message.txt"
         cmd = ["codex", "exec", "--json", "--ephemeral", "--skip-git-repo-check",
-               "-s", "read-only", "-C", str(stage), "-o", str(last)]
-        if a.model:
-            cmd += ["-m", a.model]
+               "-s", "read-only", "-C", str(stage), "-o", str(last),
+               "-m", a.model, "-c", f'model_reasoning_effort="{a.effort}"']
         for ref in a.ref:
             cmd += ["-i", str(ref.resolve())]
         cmd += ["--", build_prompt(a)]
@@ -242,14 +245,16 @@ def main(argv=None):
             data = run_codex(a)
         w, h, alpha = check_image(data, a.aspect, a.transparent)
         write_new(a.out, data, a.force)
+        generated_elsewhere = a.source is not None
         if not a.no_sidecar:
             meta = {
                 "aspect": a.aspect,
                 "codex_version": codex_version(),
+                "effort": None if generated_elsewhere else a.effort,
                 "created": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
                 "alpha": alpha,
                 "height": h,
-                "model": a.model,
+                "model": None if generated_elsewhere else a.model,
                 "prompt": a.prompt or a.note,
                 "references": [str(r) for r in a.ref],
                 "transparent": a.transparent,

@@ -158,6 +158,12 @@ class Images(Base):
         meta = json.loads(Path(f"{self.out}.json").read_text())
         self.assertEqual((meta["width"], meta["height"], meta["prompt"]), (1024, 1536, "n"))
         self.assertEqual(list(meta), sorted(meta))
+        self.assertIsNone(meta["effort"])
+
+    def test_rejects_unknown_effort(self):
+        code, _ = self.run_main("--prompt", "x", "--effort", "extreme", "--staging-root", str(self.stage),
+                                "--out", str(self.out))
+        self.assertEqual(code, 2)
 
     def test_wrong_aspect_or_missing_alpha_writes_nothing(self):
         src = self.tmp / "src.png"
@@ -209,8 +215,19 @@ class Run(Base):
         cwd, argv = self.seen.read_text().split("\n", 1)
         self.assertEqual(Path(cwd).parent, self.stage)
         self.assertIn("-s read-only", argv)
+        self.assertIn('-m gpt-6.1-sol -c model_reasoning_effort="medium"', argv)
         self.assertNotIn("dangerously", argv)
         self.assertEqual(list(self.stage.iterdir()), [])
+
+    def test_model_and_effort_reach_codex_and_sidecar(self):
+        env = self.stub_env("ok", "exec-ok.jsonl")
+        code, err = self.run_main("--prompt", "hero", "--aspect", "landscape", "--model", "m2",
+                                  "--effort", "high", "--staging-root", str(self.stage),
+                                  "--out", str(self.out), env=env)
+        self.assertEqual(code, 0, err)
+        self.assertIn('-m m2 -c model_reasoning_effort="high"', self.seen.read_text())
+        meta = json.loads(Path(f"{self.out}.json").read_text())
+        self.assertEqual((meta["model"], meta["effort"]), ("m2", "high"))
 
     def test_logged_out_exits_3_without_output(self):
         env = self.stub_env("fail", "exec-logged-out.jsonl")

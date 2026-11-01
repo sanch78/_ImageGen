@@ -44,12 +44,16 @@ python3 scripts/codex_imagegen.py \
 - `--staging-root DIR`: an existing directory in the caller's tmp root. The
   Codex run gets a fresh empty subdirectory there as its read-only working
   root, and the subdirectory is removed afterwards.
-- `--force`, `--no-sidecar`, `--model`, `--timeout SECONDS` (default 600).
+- `--model NAME` (default `gpt-6.1-sol`) and `--effort
+  low|medium|high|xhigh|max|ultra` (default `medium`) select the Codex agent
+  that calls the image tool. They change speed and token use, not the image
+  model, quality or pixel size, which the built-in tool does not expose.
+- `--force`, `--no-sidecar`, `--timeout SECONDS` (default 600).
 
 A run usually takes one to three minutes, so give the shell call a timeout
 of up to 10 minutes. On success the wrapper prints `PATH (WxH)` and writes
-`PATH.json` with the prompt, options, size, alpha flag, UTC timestamp and
-Codex version.
+`PATH.json` with the prompt, options (model and effort included), size,
+alpha flag, UTC timestamp and Codex version.
 
 | Exit | Meaning |
 | --- | --- |

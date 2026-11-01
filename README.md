@@ -37,8 +37,13 @@ python3 /space/share/libs/_ImageGen/.agents/skills/codex-imagegen/scripts/codex_
 The wrapper starts one headless run:
 
 ```bash
-codex exec --json --ephemeral --skip-git-repo-check -s read-only -C <staging>
+codex exec --json --ephemeral --skip-git-repo-check -s read-only -C <staging> \
+  -m <model> -c 'model_reasoning_effort="<effort>"'
 ```
+
+`--model` defaults to `gpt-6.1-sol` and `--effort` to `medium`. Both select
+the Codex agent that calls the image tool, not the image model. Inside a
+Codex session, the session's own model and effort apply.
 
 The run gets no extra permissions. The built-in tool generates the image
 server-side, and Codex saves it, so a read-only sandbox is enough.
